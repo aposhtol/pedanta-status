@@ -1,0 +1,4 @@
+{
+  "opis": "Zapisi o smetnjama za stranicu stanja Pedante. Uređuje se skriptom scripts/status-obavijest.sh u repozitoriju Pedante.",
+  "obavijesti": []
+}

@@ -1,0 +1,134 @@
+<!doctype html>
+<html lang="hr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Pedanta — stanje usluge</title>
+<meta name="description" content="Radi li Pedanta upravo sada. Stranica je izvan poslužitelja Pedante, pa radi i kad on ne radi.">
+<meta name="robots" content="noindex">
+<style>
+  :root { --tamna: #023245; --akcent: #38c8ad; --pozadina: #fefcf0; --kartica: #fefefe; --tekst: #1d2a30; --siva: #5b6b72;
+          --ok: #1b7f5f; --upoz: #9a5b00; --los: #b3261e; }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--pozadina); color: var(--tekst); font: 16px/1.5 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+  header { background: var(--tamna); color: #fff; padding: 18px 20px; }
+  header .unutra { max-width: 760px; margin: 0 auto; display: flex; align-items: center; gap: 10px; }
+  header b { font-size: 20px; letter-spacing: .2px; }
+  header span { color: var(--akcent); }
+  main { max-width: 760px; margin: 0 auto; padding: 20px; }
+  .kartica { background: var(--kartica); border: 1px solid #e6e2cf; border-radius: 10px; padding: 18px 20px; margin-bottom: 16px; }
+  .stanje { display: flex; align-items: center; gap: 12px; font-size: 20px; font-weight: 600; }
+  .tocka { width: 14px; height: 14px; border-radius: 50%; background: #bbb; flex: none; }
+  .ok .tocka { background: var(--ok); } .upoz .tocka { background: var(--upoz); } .los .tocka { background: var(--los); }
+  .ok { color: var(--ok); } .upoz { color: var(--upoz); } .los { color: var(--los); }
+  .sitno { color: var(--siva); font-size: 14px; }
+  h2 { font-size: 16px; margin: 0 0 10px; }
+  ul { list-style: none; margin: 0; padding: 0; }
+  li { padding: 10px 0; border-top: 1px solid #eee9d6; }
+  li:first-child { border-top: 0; padding-top: 0; }
+  .oznaka { display: inline-block; font-size: 12px; font-weight: 600; border-radius: 4px; padding: 1px 6px; margin-right: 6px; background: #eef2f3; color: var(--tamna); }
+  .oznaka.incident, .oznaka.u-tijeku { background: #fbe9e7; color: var(--los); }
+  .oznaka.maintenance { background: #fff4e0; color: var(--upoz); }
+  .oznaka.rijeseno { background: #e6f4ee; color: var(--ok); }
+  button { font: inherit; font-size: 14px; border: 1px solid var(--tamna); background: #fff; color: var(--tamna); border-radius: 6px; padding: 4px 10px; cursor: pointer; }
+  footer { max-width: 760px; margin: 0 auto; padding: 0 20px 30px; color: var(--siva); font-size: 13px; }
+  a { color: var(--tamna); }
+</style>
+</head>
+<body>
+<header><div class="unutra"><b>Pedanta</b><span>stanje usluge</span></div></header>
+<main>
+  <section class="kartica" aria-live="polite">
+    <div id="stanje" class="stanje"><span class="tocka" aria-hidden="true"></span><span id="stanje-tekst">Provjeravam…</span></div>
+    <p id="stanje-opis" class="sitno"></p>
+    <p class="sitno"><span id="provjereno"></span> <button type="button" id="ponovno">Provjeri ponovno</button></p>
+  </section>
+  <section class="kartica" id="obavijesti-aplikacije" hidden>
+    <h2>Obavijesti iz aplikacije</h2>
+    <ul id="obavijesti-popis"></ul>
+  </section>
+  <section class="kartica">
+    <h2>Zapisi o smetnjama</h2>
+    <ul id="zapisi"><li class="sitno">Učitavam…</li></ul>
+  </section>
+</main>
+<footer>
+  Ova je stranica izvan poslužitelja Pedante (GitHub Pages), pa radi i kad Pedanta ne radi. Ne sadrži nikakve podatke
+  škola ni korisnika i ne prati posjetitelje. Kontakt: <a href="mailto:kontakt@pedanta.app">kontakt@pedanta.app</a>
+</footer>
+<script>
+  const ADRESA = "https://pedanta.app/api/status";
+  const VRSTE = { incident: "Smetnja", maintenance: "Održavanje", info: "Obavijest" };
+  const vrijeme = (iso) => iso ? new Intl.DateTimeFormat("hr-HR", { timeZone: "Europe/Zagreb", dateStyle: "medium", timeStyle: "short" }).format(new Date(iso)) : "";
+  const el = (id) => document.getElementById(id);
+  const tekst = (s) => { const d = document.createElement("div"); d.textContent = s ?? ""; return d.innerHTML; };
+
+  function postavi(klasa, naslov, opis) {
+    el("stanje").className = "stanje " + klasa;
+    el("stanje-tekst").textContent = naslov;
+    el("stanje-opis").textContent = opis || "";
+    el("provjereno").textContent = "Provjereno " + vrijeme(new Date().toISOString()) + ".";
+  }
+
+  function obavijesti(lista) {
+    const sekcija = el("obavijesti-aplikacije");
+    if (!lista.length) { sekcija.hidden = true; return; }
+    sekcija.hidden = false;
+    el("obavijesti-popis").innerHTML = lista.map((n) =>
+      `<li><span class="oznaka ${tekst(n.kind)}">${VRSTE[n.kind] || "Obavijest"}</span>${tekst(n.message)}` +
+      (n.startsAt || n.endsAt ? `<div class="sitno">${n.startsAt ? "od " + vrijeme(n.startsAt) : ""}${n.endsAt ? " do " + vrijeme(n.endsAt) : ""}</div>` : "") +
+      `</li>`).join("");
+  }
+
+  async function provjeri() {
+    const prekid = new AbortController();
+    const t = setTimeout(() => prekid.abort(), 12000);
+    try {
+      const r = await fetch(ADRESA, { cache: "no-store", signal: prekid.signal });
+      const d = await r.json().catch(() => null);
+      if (r.ok && d && d.ok) {
+        postavi("ok", "Pedanta radi", "Aplikacija i baza podataka odgovaraju.");
+      } else if (d && d.ok === false) {
+        postavi("upoz", "Pedanta radi, ali baza podataka ne odgovara", (d.banner && d.banner.message) || "Radimo na tome — podaci nisu izgubljeni.");
+      } else {
+        postavi("los", "Pedanta se trenutačno ne javlja", "Poslužitelj ne odgovara kako treba (" + r.status + "). Podaci škola nisu izgubljeni.");
+      }
+      const sve = d ? [...(d.banner ? [d.banner] : []), ...(d.notices || []).filter((n) => !d.banner || n.id !== d.banner.id)] : [];
+      obavijesti(sve.filter((n) => n.id !== "db"));
+    } catch (e) {
+      // Odgovor se ne da pročitati (nema CORS-a — npr. stranica greške Cloudflarea dok poslužitelj ne radi). Javlja li
+      // se išta? Tvrdi se samo ono što se zna: „ne javlja se” tek kad ne odgovara ništa.
+      obavijesti([]);
+      try {
+        await fetch(ADRESA, { mode: "no-cors", cache: "no-store", signal: AbortSignal.timeout(10000) });
+        postavi("upoz", "Stanje se trenutačno ne može pročitati",
+          "Adresa odgovara, ali ne kaže radi li aplikacija. Ako se ne možete prijaviti, pogledajte zapise ispod ili pišite na kontakt@pedanta.app.");
+      } catch (e2) {
+        postavi("los", "Pedanta se trenutačno ne javlja", "Poslužitelj se ne javlja. Podaci škola nisu izgubljeni; zapisi o smetnji su ispod.");
+      }
+    } finally {
+      clearTimeout(t);
+    }
+  }
+
+  async function zapisi() {
+    try {
+      const r = await fetch("obavijesti.json", { cache: "no-store" });
+      const d = await r.json();
+      const lista = (d.obavijesti || []).slice().sort((a, b) => String(b.datum).localeCompare(String(a.datum)));
+      el("zapisi").innerHTML = lista.length
+        ? lista.map((z) => `<li><span class="oznaka ${z.stanje === "riješeno" ? "rijeseno" : "u-tijeku"}">${tekst(z.stanje)}</span>` +
+            `<b>${tekst(z.naslov)}</b><div class="sitno">${vrijeme(z.datum)}${z.rijeseno ? " — riješeno " + vrijeme(z.rijeseno) : ""}</div>` +
+            (z.tekst ? `<div>${tekst(z.tekst)}</div>` : "") + `</li>`).join("")
+        : `<li class="sitno">Nema zapisa o smetnjama.</li>`;
+    } catch (e) {
+      el("zapisi").innerHTML = `<li class="sitno">Zapisi se trenutačno ne mogu učitati.</li>`;
+    }
+  }
+
+  el("ponovno").addEventListener("click", () => { provjeri(); zapisi(); });
+  provjeri(); zapisi();
+  setInterval(() => { provjeri(); zapisi(); }, 60000);
+</script>
+</body>
+</html>
