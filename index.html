@@ -3,45 +3,123 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Pedanta — stanje usluge</title>
+<title>Stanje usluge | Pedanta</title>
 <meta name="description" content="Radi li Pedanta upravo sada. Stranica je izvan poslužitelja Pedante, pa radi i kad on ne radi.">
 <meta name="robots" content="noindex">
+<meta name="theme-color" content="#0a2942">
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+<link rel="preload" href="fonts/karla-latin-wght-v1.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="fonts/fraunces-latin-wght-v1.woff2" as="font" type="font/woff2" crossorigin>
 <style>
-  :root { --tamna: #023245; --akcent: #38c8ad; --pozadina: #fefcf0; --kartica: #fefefe; --tekst: #1d2a30; --siva: #5b6b72;
-          --ok: #1b7f5f; --upoz: #9a5b00; --los: #b3261e; }
+  /* Isti fontovi, boje i oblici kao u aplikaciji (app/src/app/fontovi.css, globals.css) — sve s ove stranice, ništa
+     s pedanta.app, da izgleda isto i kad Pedanta ne radi. */
+  @font-face { font-family: "Fraunces"; src: url("fonts/fraunces-latin-ext-wght-v1.woff2") format("woff2"); font-weight: 400 700; font-display: swap; unicode-range: U+100-2BA,U+2BD-2C5,U+2C7-2CC,U+2CE-2D7,U+2DD-2FF,U+304,U+308,U+329,U+1D00-1DBF,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C0,U+2113,U+2C60-2C7F,U+A720-A7FF; }
+  @font-face { font-family: "Fraunces"; src: url("fonts/fraunces-latin-wght-v1.woff2") format("woff2"); font-weight: 400 700; font-display: swap; unicode-range: U+??,U+131,U+152-153,U+2BB-2BC,U+2C6,U+2DA,U+2DC,U+304,U+308,U+329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD; }
+  @font-face { font-family: "Karla"; src: url("fonts/karla-latin-ext-wght-v1.woff2") format("woff2"); font-weight: 400 700; font-display: swap; unicode-range: U+100-2BA,U+2BD-2C5,U+2C7-2CC,U+2CE-2D7,U+2DD-2FF,U+304,U+308,U+329,U+1D00-1DBF,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C0,U+2113,U+2C60-2C7F,U+A720-A7FF; }
+  @font-face { font-family: "Karla"; src: url("fonts/karla-latin-wght-v1.woff2") format("woff2"); font-weight: 400 700; font-display: swap; unicode-range: U+??,U+131,U+152-153,U+2BB-2BC,U+2C6,U+2DA,U+2DC,U+304,U+308,U+329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD; }
+
+  :root {
+    --traka: #0a2942; --traka-dno: #08243b; --znak: #023245;
+    --akcent: #38c8ad; --akcent-svijetli: #6dd7bd; --akcent-tamni: #169981; --akcent-blijedi: #dff5ef;
+    --papir: #fbfcfd; --pozadina: #f3f6f9; --crta: #d8e2ec; --crta-jaca: #c0cfde;
+    --tinta: #0f2233; --tinta-meka: #2c4356; --tinta-blijeda: #51677c;
+    --ok: #2f7050; --ok-blijedi: #dcefe5; --upoz: #7a520d; --upoz-blijedi: #f0e2bf; --los: #9c4334; --los-blijedi: #f1d7d8;
+    --naslovi: "Fraunces", Georgia, "Palatino Linotype", serif;
+    --tekst: "Karla", "Segoe UI", system-ui, -apple-system, sans-serif;
+  }
   * { box-sizing: border-box; }
-  body { margin: 0; background: var(--pozadina); color: var(--tekst); font: 16px/1.5 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
-  header { background: var(--tamna); color: #fff; padding: 18px 20px; }
-  header .unutra { max-width: 760px; margin: 0 auto; display: flex; align-items: center; gap: 10px; }
-  header b { font-size: 20px; letter-spacing: .2px; }
-  header span { color: var(--akcent); }
-  main { max-width: 760px; margin: 0 auto; padding: 20px; }
-  .kartica { background: var(--kartica); border: 1px solid #e6e2cf; border-radius: 10px; padding: 18px 20px; margin-bottom: 16px; }
-  .stanje { display: flex; align-items: center; gap: 12px; font-size: 20px; font-weight: 600; }
-  .tocka { width: 14px; height: 14px; border-radius: 50%; background: #bbb; flex: none; }
-  .ok .tocka { background: var(--ok); } .upoz .tocka { background: var(--upoz); } .los .tocka { background: var(--los); }
-  .ok { color: var(--ok); } .upoz { color: var(--upoz); } .los { color: var(--los); }
-  .sitno { color: var(--siva); font-size: 14px; }
-  h2 { font-size: 16px; margin: 0 0 10px; }
+  body { margin: 0; background: var(--pozadina); color: var(--tinta); font: 16px/1.55 var(--tekst); -webkit-font-smoothing: antialiased; }
+  a { color: var(--znak); }
+
+  /* Gornja traka kao u aplikaciji: cijela širina, znak u lijevom kutu. */
+  .traka { background: linear-gradient(180deg, var(--traka) 0%, var(--traka-dno) 100%); color: #fff;
+           box-shadow: 0 8px 24px rgba(2,30,52,.18); }
+  .traka-unutra { height: 64px; padding: 0 16px; display: flex; align-items: center; gap: 16px; }
+  .marka { display: flex; align-items: center; gap: 10px; color: #fff; text-decoration: none; flex: none; }
+  .znak { width: 40px; height: 40px; background: #fff; border-radius: 12px; padding: 6px; display: grid; place-items: center;
+          box-shadow: 0 2px 6px rgba(0,0,0,.18); }
+  .znak svg { width: 100%; height: 100%; display: block; }
+  .ime { font: 400 20px/1 var(--naslovi); letter-spacing: -.01em; }
+  .mjesto { display: flex; align-items: center; gap: 8px; padding-left: 12px; border-left: 1px solid rgba(255,255,255,.15);
+            font-size: 14px; color: rgba(255,255,255,.85); min-width: 0; }
+  .prijava { margin-left: auto; font-size: 13px; color: rgba(255,255,255,.75); text-decoration: none; padding: 6px 10px;
+             border-radius: 6px; white-space: nowrap; }
+  .prijava:hover { color: #fff; background: rgba(255,255,255,.08); }
+
+  main { max-width: 760px; margin: 0 auto; padding: 32px 20px 8px; }
+  .naslov { display: flex; align-items: center; gap: 14px; margin-bottom: 24px; }
+  .ikona { width: 52px; height: 52px; border-radius: 12px; background: var(--akcent-blijedi); color: var(--akcent-tamni);
+           display: grid; place-items: center; flex: none; border: 1px solid rgba(22,153,129,.18); }
+  .ikona svg { width: 26px; height: 26px; }
+  h1 { font: 500 30px/1.15 var(--naslovi); margin: 0; letter-spacing: -.015em; }
+  .podnaslov { margin: 4px 0 0; color: var(--tinta-blijeda); }
+
+  .kartica { background: var(--papir); border: 1px solid var(--crta); border-radius: 12px; padding: 20px 22px; margin-bottom: 16px;
+             box-shadow: 0 1px 2px rgba(15,34,51,.04); }
+  .glavna { border-left-width: 4px; }
+  .glavna.ok { border-left-color: var(--ok); } .glavna.upoz { border-left-color: #b07c1a; } .glavna.los { border-left-color: var(--los); }
+  .stanje { display: flex; align-items: center; gap: 12px; font: 500 24px/1.25 var(--naslovi); }
+  .tocka { width: 14px; height: 14px; border-radius: 50%; background: var(--crta-jaca); flex: none; }
+  .ok .tocka { background: var(--ok); box-shadow: 0 0 0 4px var(--ok-blijedi); }
+  .upoz .tocka { background: #b07c1a; box-shadow: 0 0 0 4px var(--upoz-blijedi); }
+  .los .tocka { background: var(--los); box-shadow: 0 0 0 4px var(--los-blijedi); }
+  .stanje.ok { color: var(--ok); } .stanje.upoz { color: var(--upoz); } .stanje.los { color: var(--los); }
+  .opis { margin: 10px 0 0; color: var(--tinta-meka); }
+  .provjera { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; margin: 14px 0 0; padding-top: 14px;
+              border-top: 1px solid var(--crta); font-size: 14px; color: var(--tinta-blijeda); }
+  .sitno { color: var(--tinta-blijeda); font-size: 14px; }
+  h2 { font: 600 17px/1.3 var(--naslovi); margin: 0 0 12px; }
   ul { list-style: none; margin: 0; padding: 0; }
-  li { padding: 10px 0; border-top: 1px solid #eee9d6; }
+  li { padding: 12px 0; border-top: 1px solid var(--crta); }
   li:first-child { border-top: 0; padding-top: 0; }
-  .oznaka { display: inline-block; font-size: 12px; font-weight: 600; border-radius: 4px; padding: 1px 6px; margin-right: 6px; background: #eef2f3; color: var(--tamna); }
-  .oznaka.incident, .oznaka.u-tijeku { background: #fbe9e7; color: var(--los); }
-  .oznaka.maintenance { background: #fff4e0; color: var(--upoz); }
-  .oznaka.rijeseno { background: #e6f4ee; color: var(--ok); }
-  button { font: inherit; font-size: 14px; border: 1px solid var(--tamna); background: #fff; color: var(--tamna); border-radius: 6px; padding: 4px 10px; cursor: pointer; }
-  footer { max-width: 760px; margin: 0 auto; padding: 0 20px 30px; color: var(--siva); font-size: 13px; }
-  a { color: var(--tamna); }
+  li:last-child { padding-bottom: 0; }
+  .oznaka { display: inline-block; font-size: 12px; font-weight: 700; border-radius: 999px; padding: 1px 9px; margin-right: 8px;
+            background: var(--pozadina); color: var(--znak); border: 1px solid var(--crta); vertical-align: 1px; }
+  .oznaka.incident, .oznaka.u-tijeku { background: var(--los-blijedi); color: var(--los); border-color: rgba(156,67,52,.25); }
+  .oznaka.maintenance { background: var(--upoz-blijedi); color: var(--upoz); border-color: rgba(160,110,30,.25); }
+  .oznaka.rijeseno { background: var(--ok-blijedi); color: var(--ok); border-color: rgba(47,112,80,.25); }
+  button { font: 600 14px/1 var(--tekst); border: 1px solid var(--crta-jaca); background: #fff; color: var(--tinta);
+           border-radius: 8px; padding: 8px 12px; cursor: pointer; }
+  button:hover { background: var(--pozadina); border-color: var(--tinta-blijeda); }
+  button:focus-visible, a:focus-visible { outline: 2px solid var(--akcent-tamni); outline-offset: 2px; }
+  footer { max-width: 760px; margin: 0 auto; padding: 8px 20px 40px; color: var(--tinta-blijeda); font-size: 13px; }
+
+  @media (max-width: 520px) {
+    .traka-unutra { gap: 12px; }
+    .prijava { display: none; }
+    main { padding-top: 24px; }
+    h1 { font-size: 26px; }
+    .stanje { font-size: 21px; }
+  }
 </style>
 </head>
 <body>
-<header><div class="unutra"><b>Pedanta</b><span>stanje usluge</span></div></header>
+<header class="traka">
+  <div class="traka-unutra">
+    <a class="marka" href="https://pedanta.app" aria-label="Pedanta">
+      <span class="znak" aria-hidden="true">
+        <svg viewBox="0 0 272 272"><path fill="#023245" fill-rule="evenodd" d="M36 60H111L63 0H173A99 99 0 0 1 173 198H111V233L36 272ZM111 60V138H164A39 39 0 0 0 164 60Z"/><path fill="#23baa0" d="M1 0H63L111 60H57Z"/><path fill="#70eccc" d="M111 233V272H36Z"/></svg>
+      </span>
+      <span class="ime">Pedanta</span>
+    </a>
+    <span class="mjesto">Stanje usluge</span>
+    <a class="prijava" href="https://pedanta.app/prijava">Prijava u Pedantu →</a>
+  </div>
+</header>
 <main>
-  <section class="kartica" aria-live="polite">
+  <div class="naslov">
+    <span class="ikona" aria-hidden="true">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
+    </span>
+    <div>
+      <h1>Stanje usluge</h1>
+      <p class="podnaslov">Radi li Pedanta upravo sada — provjerava se svake minute.</p>
+    </div>
+  </div>
+  <section class="kartica glavna" id="kartica-stanja" aria-live="polite">
     <div id="stanje" class="stanje"><span class="tocka" aria-hidden="true"></span><span id="stanje-tekst">Provjeravam…</span></div>
-    <p id="stanje-opis" class="sitno"></p>
-    <p class="sitno"><span id="provjereno"></span> <button type="button" id="ponovno">Provjeri ponovno</button></p>
+    <p id="stanje-opis" class="opis"></p>
+    <p class="provjera"><span id="provjereno"></span> <button type="button" id="ponovno">Provjeri ponovno</button></p>
   </section>
   <section class="kartica" id="obavijesti-aplikacije" hidden>
     <h2>Obavijesti iz aplikacije</h2>
@@ -65,6 +143,7 @@
 
   function postavi(klasa, naslov, opis) {
     el("stanje").className = "stanje " + klasa;
+    el("kartica-stanja").className = "kartica glavna " + klasa;
     el("stanje-tekst").textContent = naslov;
     el("stanje-opis").textContent = opis || "";
     el("provjereno").textContent = "Provjereno " + vrijeme(new Date().toISOString()) + ".";
