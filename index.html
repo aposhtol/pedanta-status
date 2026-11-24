@@ -80,7 +80,19 @@
   .oznaka.rijeseno { background: var(--ok-blijedi); color: var(--ok); border-color: rgba(47,112,80,.25); }
   button { font: 600 14px/1 var(--tekst); border: 1px solid var(--crta-jaca); background: #fff; color: var(--tinta);
            border-radius: 8px; padding: 8px 12px; cursor: pointer; }
+  button { display: inline-flex; align-items: center; gap: 8px; }
   button:hover { background: var(--pozadina); border-color: var(--tinta-blijeda); }
+  button:disabled { cursor: progress; color: var(--tinta-blijeda); background: var(--pozadina); }
+  .vrtnja { display: none; width: 12px; height: 12px; border-radius: 50%; border: 2px solid var(--crta-jaca);
+            border-top-color: var(--akcent-tamni); animation: vrti .7s linear infinite; }
+  button:disabled .vrtnja { display: inline-block; }
+  @keyframes vrti { to { transform: rotate(360deg); } }
+  .glavna { transition: opacity .2s; }
+  .glavna.provjerava .stanje, .glavna.provjerava .opis { opacity: .45; }
+  #provjereno { border-radius: 6px; padding: 2px 6px; margin-left: -6px; }
+  #provjereno.svjeze { animation: bljesak 1.6s ease-out; }
+  @keyframes bljesak { 0%, 35% { background: var(--akcent-blijedi); color: var(--akcent-tamni); } 100% { background: transparent; } }
+  @media (prefers-reduced-motion: reduce) { .vrtnja { animation: none; border-top-color: var(--crta-jaca); } #provjereno.svjeze { animation: none; } }
   button:focus-visible, a:focus-visible { outline: 2px solid var(--akcent-tamni); outline-offset: 2px; }
   footer { max-width: 760px; margin: 0 auto; padding: 8px 20px 40px; color: var(--tinta-blijeda); font-size: 13px; }
 
@@ -119,7 +131,7 @@
   <section class="kartica glavna" id="kartica-stanja" aria-live="polite">
     <div id="stanje" class="stanje"><span class="tocka" aria-hidden="true"></span><span id="stanje-tekst">Provjeravam…</span></div>
     <p id="stanje-opis" class="opis"></p>
-    <p class="provjera"><span id="provjereno"></span> <button type="button" id="ponovno">Provjeri ponovno</button></p>
+    <p class="provjera"><span id="provjereno"></span> <button type="button" id="ponovno"><span class="vrtnja" aria-hidden="true"></span><span>Provjeri ponovno</span></button></p>
   </section>
   <section class="kartica" id="obavijesti-aplikacije" hidden>
     <h2>Obavijesti iz aplikacije</h2>
@@ -137,7 +149,9 @@
 <script>
   const ADRESA = "https://pedanta.app/api/status";
   const VRSTE = { incident: "Smetnja", maintenance: "Održavanje", info: "Obavijest" };
-  const vrijeme = (iso) => iso ? new Intl.DateTimeFormat("hr-HR", { timeZone: "Europe/Zagreb", dateStyle: "medium", timeStyle: "short" }).format(new Date(iso)) : "";
+  const oblik = (sekunde) => new Intl.DateTimeFormat("hr-HR", { timeZone: "Europe/Zagreb", day: "numeric", month: "numeric", year: "numeric",
+    hour: "2-digit", minute: "2-digit", ...(sekunde ? { second: "2-digit" } : {}) });
+  const vrijeme = (iso) => iso ? oblik(false).format(new Date(iso)) : "";
   const el = (id) => document.getElementById(id);
   const tekst = (s) => { const d = document.createElement("div"); d.textContent = s ?? ""; return d.innerHTML; };
 
@@ -146,7 +160,7 @@
     el("kartica-stanja").className = "kartica glavna " + klasa;
     el("stanje-tekst").textContent = naslov;
     el("stanje-opis").textContent = opis || "";
-    el("provjereno").textContent = "Provjereno " + vrijeme(new Date().toISOString()) + ".";
+    el("provjereno").textContent = "Provjereno " + oblik(true).format(new Date()) + ".";
   }
 
   function obavijesti(lista) {
@@ -166,22 +180,22 @@
       const r = await fetch(ADRESA, { cache: "no-store", signal: prekid.signal });
       const d = await r.json().catch(() => null);
       if (r.ok && d && d.ok) {
-        postavi("ok", "Pedanta radi", "Aplikacija i baza podataka odgovaraju.");
+        postavi("ok", "Pedanta radi", "Aplikacija i baza podataka rade.");
       } else if (d && d.ok === false) {
-        postavi("upoz", "Pedanta radi, ali baza podataka ne odgovara", (d.banner && d.banner.message) || "Radimo na tome — podaci nisu izgubljeni.");
+        postavi("upoz", "Pedanta radi, ali baza podataka nije dostupna", (d.banner && d.banner.message) || "Radimo na tome — podaci nisu izgubljeni.");
       } else {
-        postavi("los", "Pedanta se trenutačno ne javlja", "Poslužitelj ne odgovara kako treba (" + r.status + "). Podaci škola nisu izgubljeni.");
+        postavi("los", "Pedanta se trenutačno ne javlja", "Poslužitelj javlja grešku (" + r.status + "). Podaci škola nisu izgubljeni.");
       }
       const sve = d ? [...(d.banner ? [d.banner] : []), ...(d.notices || []).filter((n) => !d.banner || n.id !== d.banner.id)] : [];
       obavijesti(sve.filter((n) => n.id !== "db"));
     } catch (e) {
       // Odgovor se ne da pročitati (nema CORS-a — npr. stranica greške Cloudflarea dok poslužitelj ne radi). Javlja li
-      // se išta? Tvrdi se samo ono što se zna: „ne javlja se” tek kad ne odgovara ništa.
+      // se išta? Tvrdi se samo ono što se zna: „ne javlja se” tek kad se ništa ne javi.
       obavijesti([]);
       try {
         await fetch(ADRESA, { mode: "no-cors", cache: "no-store", signal: AbortSignal.timeout(10000) });
         postavi("upoz", "Stanje se trenutačno ne može pročitati",
-          "Adresa odgovara, ali ne kaže radi li aplikacija. Ako se ne možete prijaviti, pogledajte zapise ispod ili pišite na kontakt@pedanta.app.");
+          "Poslužitelj se javlja, ali se ne vidi radi li aplikacija. Ako se ne možete prijaviti, pogledajte zapise ispod ili pišite na kontakt@pedanta.app.");
       } catch (e2) {
         postavi("los", "Pedanta se trenutačno ne javlja", "Poslužitelj se ne javlja. Podaci škola nisu izgubljeni; zapisi o smetnji su ispod.");
       }
@@ -205,9 +219,39 @@
     }
   }
 
-  el("ponovno").addEventListener("click", () => { provjeri(); zapisi(); });
-  provjeri(); zapisi();
-  setInterval(() => { provjeri(); zapisi(); }, 60000);
+  let uTijeku = false;
+  async function osvjezi(rucno) {
+    if (uTijeku) return;
+    uTijeku = true;
+    const gumb = el("ponovno"), kartica = el("kartica-stanja"), kad = el("provjereno");
+    const pocetak = Date.now();
+    if (rucno) {
+      gumb.disabled = true;
+      gumb.setAttribute("aria-busy", "true");
+      gumb.lastChild.textContent = "Provjeravam…";
+      kartica.classList.add("provjerava");
+      kad.classList.remove("svjeze");
+    }
+    try {
+      await Promise.all([provjeri(), zapisi()]);
+      // Odgovor stigne za desetinku — bez kratke stanke promjena se ne bi ni vidjela.
+      if (rucno) await new Promise((r) => setTimeout(r, Math.max(0, 700 - (Date.now() - pocetak))));
+    } finally {
+      uTijeku = false;
+      if (rucno) {
+        gumb.disabled = false;
+        gumb.removeAttribute("aria-busy");
+        gumb.lastChild.textContent = "Provjeri ponovno";
+        kartica.classList.remove("provjerava");
+        void kad.offsetWidth; // ponovno pokreni bljesak i kod drugog klika zaredom
+        kad.classList.add("svjeze");
+      }
+    }
+  }
+
+  el("ponovno").addEventListener("click", () => osvjezi(true));
+  osvjezi(false);
+  setInterval(() => osvjezi(false), 60000);
 </script>
 </body>
 </html>
